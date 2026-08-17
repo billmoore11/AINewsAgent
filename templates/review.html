@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Review & Approve - AI News Agent{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+    <h1>Review & Approve</h1>
+    <a href="{{ url_for('dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+</div>
+
+<form method="POST" action="/review" class="review-form fade-in delay-1">
+    <div class="card section-card">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" value="{{ draft.title }}" class="form-control">
+        
+        <label for="intro" class="mt-4">Introduction</label>
+        <textarea id="intro" name="intro" rows="4" class="form-control">{{ draft.intro }}</textarea>
+    </div>
+
+    <div class="items-container">
+        <h3>News Items</h3>
+        <input type="hidden" name="item_count" value="{{ draft.items|length }}">
+        
+        {% for item in draft.items %}
+        <div class="card news-item-card fade-in delay-2">
+            <div class="item-header">
+                <label>Item {{ loop.index }} Source: <span class="source-badge">{{ item.source }}</span></label>
+                <input type="hidden" name="items[{{ loop.index0 }}].source" value="{{ item.source }}">
+                <button type="button" class="btn-remove">Remove</button>
+            </div>
+            
+            <label for="headline_{{ loop.index0 }}">Headline</label>
+            <input type="text" id="headline_{{ loop.index0 }}" name="items[{{ loop.index0 }}].headline" value="{{ item.headline }}" class="form-control">
+            
+            <label for="summary_{{ loop.index0 }}" class="mt-3">Summary</label>
+            <textarea id="summary_{{ loop.index0 }}" name="items[{{ loop.index0 }}].summary" rows="3" class="form-control">{{ item.summary }}</textarea>
+            
+            <label for="why_it_matters_{{ loop.index0 }}" class="mt-3">Why It Matters</label>
+            <textarea id="why_it_matters_{{ loop.index0 }}" name="items[{{ loop.index0 }}].why_it_matters" rows="2" class="form-control">{{ item.why_it_matters }}</textarea>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card section-card fade-in delay-3">
+        <label for="closing">Closing</label>
+        <textarea id="closing" name="closing" rows="3" class="form-control">{{ draft.closing }}</textarea>
+    </div>
+
+    <div class="action-bar fade-in delay-4">
+        <button type="submit" name="action" value="save" class="btn btn-primary">Save Draft</button>
+        <button type="submit" name="action" value="approve" class="btn btn-success glow-effect-success">Approve &amp; Prepare for SharePoint 📋</button>
+        <button type="submit" formaction="/fetch" class="btn btn-outline">Regenerate Summary</button>
+    </div>
+</form>
+
+<script>
+document.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const card = btn.closest('.news-item-card');
+        card.style.transition = 'opacity 0.3s, transform 0.3s';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(30px)';
+        setTimeout(() => {
+            // Clear the fields so the item is skipped on submit
+            card.querySelectorAll('input, textarea').forEach(el => el.value = '');
+            card.style.display = 'none';
+        }, 300);
+    });
+});
+</script>
+{% endblock %}

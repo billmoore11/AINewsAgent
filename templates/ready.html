@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}SharePoint Ready - AI News Agent{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+    <div>
+        <h1>Ready for SharePoint</h1>
+        <p class="subtitle">Approved content formatted for copying into your SharePoint site</p>
+    </div>
+    <a href="https://assoceng.sharepoint.com/sites/AESE/SitePages/Artificial-Intelligence-Resource-Centre.aspx" target="_blank" class="btn btn-primary glow-effect">Open SharePoint Site &#8599;</a>
+</div>
+
+<div class="card section-card fade-in delay-1">
+    <div class="item-header">
+        <label>Page / Post Title</label>
+        <button type="button" class="btn btn-outline btn-sm copy-btn" onclick="copyText('title-text', this)">📋 Copy Title</button>
+    </div>
+    <input type="text" id="title-text" value="{{ digest.title }}" class="form-control" readonly style="font-weight: 700; font-size: 1.1rem;">
+</div>
+
+<div class="card section-card fade-in delay-2">
+    <div class="item-header" style="margin-bottom: 20px;">
+        <h3>Post Content</h3>
+        <div class="tab-buttons" style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-success copy-btn glow-effect-success" onclick="copyRichText('preview-box', this)">📋 Copy Formatted Text</button>
+            <button type="button" class="btn btn-outline copy-btn" onclick="copyText('html-code', this)">📋 Copy HTML</button>
+            <button type="button" class="btn btn-outline copy-btn" onclick="copyText('markdown-code', this)">📋 Copy Markdown</button>
+        </div>
+    </div>
+
+    <!-- Live Formatted Preview -->
+    <div id="preview-box" class="sharepoint-preview" style="background: #ffffff; color: #242424; padding: 30px; border-radius: 12px; font-family: 'Segoe UI', -apple-system, sans-serif; line-height: 1.6; margin-bottom: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+        <p style="font-size: 1.05rem; color: #444; font-style: italic; margin-bottom: 20px;">{{ digest.intro }}</p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+        
+        {% for item in digest.items %}
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #005a9e; font-size: 1.25rem; font-weight: 600; margin-bottom: 6px;">{{ item.headline }}</h3>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;"><strong>Source:</strong> {{ item.source }}</p>
+            <p style="margin-bottom: 8px; color: #333;">{{ item.summary }}</p>
+            <p style="font-size: 0.95rem; color: #107c41; background: #f0fdf4; padding: 8px 12px; border-left: 3px solid #107c41; border-radius: 4px;"><strong>Why it matters:</strong> {{ item.why_it_matters }}</p>
+        </div>
+        {% endfor %}
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+        <p style="font-size: 0.95rem; color: #555;">{{ digest.closing }}</p>
+    </div>
+
+    <!-- Hidden Raw Codes for Copying -->
+    <textarea id="html-code" style="display: none;">{{ html_content }}</textarea>
+    <textarea id="markdown-code" style="display: none;">{{ markdown_content }}</textarea>
+</div>
+
+<div class="action-bar fade-in delay-3" style="justify-content: space-between;">
+    <a href="{{ url_for('review') }}" class="btn btn-outline">&larr; Back to Edit Draft</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Return to Dashboard &rarr;</a>
+</div>
+
+<script>
+function copyText(elementId, btn) {
+    const el = document.getElementById(elementId);
+    const text = el.value || el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = '✅ Copied!';
+        btn.style.opacity = '0.8';
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.opacity = '1';
+        }, 2000);
+    });
+}
+
+function copyRichText(containerId, btn) {
+    const container = document.getElementById(containerId);
+    const range = document.createRange();
+    range.selectNode(container);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    
+    try {
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        const originalText = btn.innerText;
+        btn.innerText = '✅ Formatted Content Copied!';
+        setTimeout(() => {
+            btn.innerText = originalText;
+        }, 2000);
+    } catch (err) {
+        copyText('html-code', btn);
+    }
+}
+</script>
+{% endblock %}

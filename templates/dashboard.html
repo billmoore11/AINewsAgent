@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - AI News Agent{% endblock %}
+
+{% block content %}
+<section class="hero fade-in">
+    <h1 class="gradient-text">AI Newsletter Agent</h1>
+    <p class="subtitle">Your daily AI news, curated and published automatically</p>
+</section>
+
+<section class="status-cards fade-in delay-1">
+    <div class="card stat-card">
+        <h3>Today's Emails</h3>
+        <div class="stat-value">{{ email_count|default(0) }}</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Draft Status</h3>
+        <div class="stat-value">{{ draft_status|default('None') }}</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Published Posts</h3>
+        <div class="stat-value">{{ published_count|default(0) }}</div>
+    </div>
+</section>
+
+<section class="main-action fade-in delay-2">
+    <form method="POST" action="/fetch">
+        <button type="submit" class="btn btn-primary btn-large glow-effect">Fetch & Summarize Today's Newsletters</button>
+    </form>
+</section>
+
+{% if draft %}
+<section class="draft-preview fade-in delay-3">
+    <div class="card preview-card">
+        <h2>Draft Ready for Review</h2>
+        <p class="draft-title">{{ draft.title }}</p>
+        <p class="draft-excerpt">{{ draft.intro | truncate(150) }}</p>
+        <a href="{{ url_for('review') }}" class="btn btn-outline">Review Draft</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

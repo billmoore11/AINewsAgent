@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# App-specific
+.env
+token.json
+ms_token_cache.json
+credentials.json
+agent_data.db
