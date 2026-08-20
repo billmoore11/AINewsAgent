@@ -8,6 +8,31 @@
     <a href="{{ url_for('dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
 </div>
 
+{% if draft.qc_report %}
+<div class="card section-card qc-card fade-in">
+    <div class="qc-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.4rem;">🛡️</span>
+            <div>
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Quality Control & Anti-Hallucination Audit</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Cross-examined against raw newsletter source text</p>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="badge {% if draft.qc_report.overall_status == 'PASSED' %}badge-pass{% else %}badge-warn{% endif %}">
+                {{ draft.qc_report.overall_status }}
+            </span>
+            <span class="qc-score-pill">
+                {{ draft.qc_report.overall_score }}% Grounded
+            </span>
+        </div>
+    </div>
+    <p style="font-size: 0.95rem; color: #d0d0e0; margin-bottom: 0; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 8px; border-left: 3px solid {% if draft.qc_report.overall_status == 'PASSED' %}#00d4aa{% else %}#ffaa00{% endif %};">
+        {{ draft.qc_report.summary_notes }}
+    </p>
+</div>
+{% endif %}
+
 <form method="POST" action="/review" class="review-form fade-in delay-1">
     <div class="card section-card">
         <label for="title">Title</label>
@@ -22,21 +47,60 @@
         <input type="hidden" name="item_count" value="{{ draft.items|length }}">
         
         {% for item in draft.items %}
+        {% set item_idx = loop.index0 %}
+        {% set check = (draft.qc_report and draft.qc_report.item_checks and draft.qc_report.item_checks|length > item_idx) and draft.qc_report.item_checks[item_idx] or None %}
+        
         <div class="card news-item-card fade-in delay-2">
             <div class="item-header">
-                <label>Item {{ loop.index }} Source: <span class="source-badge">{{ item.source }}</span></label>
-                <input type="hidden" name="items[{{ loop.index0 }}].source" value="{{ item.source }}">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label style="margin: 0;">Item {{ loop.index }} Source: <span class="source-badge">{{ item.source }}</span></label>
+                    
+                    {% if check %}
+                        {% if check.verdict == 'VERIFIED' %}
+                            <span class="qc-badge qc-badge-pass" title="{{ check.fact_check_notes }}">
+                                🛡️ Verified Grounded ({{ check.confidence_score }}%)
+                            </span>
+                        {% else %}
+                            <span class="qc-badge qc-badge-flag" title="{{ check.fact_check_notes }}">
+                                ⚠️ Fact-Check Flagged
+                            </span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                <input type="hidden" name="items[{{ item_idx }}].source" value="{{ item.source }}">
                 <button type="button" class="btn-remove">Remove</button>
             </div>
+
+            {% if check and check.verdict == 'FLAGGED' %}
+            <div class="qc-flag-box mb-3" style="background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <div>
+                        <strong style="color: #ffaa00; font-size: 0.9rem;">⚠️ Auditor Note:</strong>
+                        <p style="font-size: 0.88rem; color: #eee; margin: 4px 0 8px 0;">{{ check.fact_check_notes }}</p>
+                        {% if check.suggested_correction %}
+                        <div style="font-size: 0.85rem; color: #00d4aa; background: rgba(0,212,170,0.08); padding: 8px; border-radius: 6px;">
+                            <strong>Suggested Correction:</strong> {{ check.suggested_correction }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if check.suggested_correction %}
+                    <button type="button" class="btn btn-outline btn-sm" style="white-space: nowrap; font-size: 0.8rem;" onclick="applyCorrection('{{ item_idx }}', '{{ check.suggested_correction|escapejs }}')">
+                        ✨ Apply Correction
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             
-            <label for="headline_{{ loop.index0 }}">Headline</label>
-            <input type="text" id="headline_{{ loop.index0 }}" name="items[{{ loop.index0 }}].headline" value="{{ item.headline }}" class="form-control">
+            <label for="headline_{{ item_idx }}">Headline</label>
+            <input type="text" id="headline_{{ item_idx }}" name="items[{{ item_idx }}].headline" value="{{ item.headline }}" class="form-control">
             
-            <label for="summary_{{ loop.index0 }}" class="mt-3">Summary</label>
-            <textarea id="summary_{{ loop.index0 }}" name="items[{{ loop.index0 }}].summary" rows="3" class="form-control">{{ item.summary }}</textarea>
+            <label for="summary_{{ item_idx }}" class="mt-3">Summary</label>
+            <textarea id="summary_{{ item_idx }}" name="items[{{ item_idx }}].summary" rows="3" class="form-control">{{ item.summary }}</textarea>
             
-            <label for="why_it_matters_{{ loop.index0 }}" class="mt-3">Why It Matters</label>
-            <textarea id="why_it_matters_{{ loop.index0 }}" name="items[{{ loop.index0 }}].why_it_matters" rows="2" class="form-control">{{ item.why_it_matters }}</textarea>
+            <label for="why_it_matters_{{ item_idx }}" class="mt-3">Why It Matters</label>
+            <textarea id="why_it_matters_{{ item_idx }}" name="items[{{ item_idx }}].why_it_matters" rows="2" class="form-control">{{ item.why_it_matters }}</textarea>
         </div>
         {% endfor %}
     </div>
@@ -67,5 +131,17 @@ document.querySelectorAll('.btn-remove').forEach(btn => {
         }, 300);
     });
 });
+
+function applyCorrection(idx, correctionText) {
+    const summaryField = document.getElementById('summary_' + idx);
+    if (summaryField) {
+        summaryField.value = correctionText;
+        summaryField.style.transition = 'background-color 0.4s';
+        summaryField.style.backgroundColor = 'rgba(0, 212, 170, 0.15)';
+        setTimeout(() => {
+            summaryField.style.backgroundColor = '';
+        }, 1200);
+    }
+}
 </script>
 {% endblock %}

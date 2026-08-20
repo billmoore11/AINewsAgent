@@ -506,6 +506,63 @@ label {
     background: rgba(10, 10, 26, 0.5);
 }
 
+/* Quality Control & Anti-Hallucination Audit Styles */
+.qc-card {
+    border-left: 4px solid #00d4aa;
+    background: rgba(0, 212, 170, 0.04);
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.badge-pass {
+    background: rgba(0, 212, 170, 0.15);
+    color: #00d4aa;
+    border: 1px solid rgba(0, 212, 170, 0.4);
+}
+
+.badge-warn {
+    background: rgba(255, 170, 0, 0.15);
+    color: #ffaa00;
+    border: 1px solid rgba(255, 170, 0, 0.4);
+}
+
+.qc-score-pill {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.qc-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.qc-badge-pass {
+    background: rgba(0, 212, 170, 0.1);
+    color: #00d4aa;
+    border: 1px solid rgba(0, 212, 170, 0.25);
+}
+
+.qc-badge-flag {
+    background: rgba(255, 170, 0, 0.15);
+    color: #ffaa00;
+    border: 1px solid rgba(255, 170, 0, 0.35);
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }

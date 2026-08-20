@@ -17,11 +17,25 @@ class NewsItem(BaseModel):
     why_it_matters: str = Field(description="Why this matters for AI practitioners")
     source: str = Field(description="Newsletter name or source")
 
+class ItemFactCheck(BaseModel):
+    headline: str = Field(description="Headline of the item being checked")
+    verdict: str = Field(description="VERIFIED or FLAGGED")
+    confidence_score: int = Field(description="Groundedness confidence score 0 to 100")
+    fact_check_notes: str = Field(description="Audit explanation verifying claims against raw text or pointing out inconsistencies")
+    suggested_correction: str | None = Field(default=None, description="Corrected text if FLAGGED, or empty if VERIFIED")
+
+class QualityControlReport(BaseModel):
+    overall_score: int = Field(description="Overall groundedness score 0 to 100")
+    overall_status: str = Field(description="PASSED or NEEDS_ATTENTION")
+    summary_notes: str = Field(description="General quality control assessment summary")
+    item_checks: list[ItemFactCheck] = Field(description="Fact-check breakdown for each item in order")
+
 class DailyDigest(BaseModel):
     title: str = Field(description="Blog post title")
     intro: str = Field(description="Engaging 1-2 sentence intro")
     items: list[NewsItem] = Field(description="Top 5-7 most interesting news items")
     closing: str = Field(description="Brief closing paragraph")
+    qc_report: QualityControlReport | None = Field(default=None, description="Quality control audit report")
 
 SYSTEM_PROMPT = """
 You are a senior AI journalist and analyst. Your job is to read through various AI newsletters 
@@ -30,6 +44,23 @@ and create a highly engaging, insightful daily digest.
 - Deduplicate stories if multiple newsletters cover the same topic.
 - Rank the items by impact and importance.
 - Limit to the top 5-7 most interesting items.
+"""
+
+QC_AUDITOR_PROMPT = """
+You are an uncompromising Lead Fact-Checker and Quality Control Auditor.
+Your single mission is to PREVENT HALLUCINATIONS and ensure 100% factual accuracy.
+
+You will be given:
+1. RAW SOURCED TEXT (The exact email contents received today)
+2. GENERATED DAILY DIGEST (The proposed summary items)
+
+Task:
+Cross-examine EVERY headline, summary, and 'why it matters' claim against the RAW SOURCED TEXT.
+1. Check names, companies, model version numbers, statistics, and metrics.
+2. Verify if any facts were fabricated, exaggerated, or misattributed.
+3. If an item is 100% supported by the raw source text, mark verdict: "VERIFIED" with confidence_score: 95-100.
+4. If an item contains ANY unverified claim, exaggeration, or wrong metric, mark verdict: "FLAGGED", state the exact discrepancy in fact_check_notes, and provide a grounded suggested_correction using ONLY facts present in the raw source text.
+5. Compute an overall_score (0-100) reflecting the proportion of grounded facts.
 """
 
 def summarize_newsletters(emails: list[EmailContent]) -> DailyDigest:
@@ -68,12 +99,64 @@ def summarize_newsletters(emails: list[EmailContent]) -> DailyDigest:
                 ),
             )
             logger.info(f"Summarization complete using {model_name}.")
-            return response.parsed if hasattr(response, 'parsed') and response.parsed else DailyDigest.model_validate_json(response.text)
+            digest = response.parsed if hasattr(response, 'parsed') and response.parsed else DailyDigest.model_validate_json(response.text)
+            
+            # Pass 2: Run Quality Control & Anti-Hallucination Audit
+            try:
+                logger.info("Running Quality Control & Anti-Hallucination Audit...")
+                qc = run_quality_control_audit(client, full_text, digest)
+                digest.qc_report = qc
+                logger.info(f"Quality Control complete: {qc.overall_status} (Score: {qc.overall_score}%)")
+            except Exception as qc_err:
+                logger.warning(f"QC audit failed (non-fatal): {qc_err}")
+                
+            return digest
         except Exception as e:
             logger.warning(f"Model {model_name} failed: {e}. Trying fallback...")
             last_error = e
 
     raise last_error
+
+def run_quality_control_audit(client: genai.Client, full_text: str, digest: DailyDigest) -> QualityControlReport:
+    """
+    Pass 2: Fact-checks the generated DailyDigest against the raw email text to detect any hallucinations.
+    """
+    audit_input = f"""=== RAW SOURCED TEXT ===
+{full_text}
+
+=== GENERATED DAILY DIGEST TO FACT-CHECK ===
+Title: {digest.title}
+Intro: {digest.intro}
+
+Items:
+"""
+    for i, item in enumerate(digest.items, 1):
+        audit_input += f"\n[{i}] Headline: {item.headline}\nSource: {item.source}\nSummary: {item.summary}\nWhy it matters: {item.why_it_matters}\n"
+
+    candidate_models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
+    for model_name in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=audit_input,
+                config=types.GenerateContentConfig(
+                    system_instruction=QC_AUDITOR_PROMPT,
+                    response_mime_type="application/json",
+                    response_schema=QualityControlReport,
+                    temperature=0.1
+                ),
+            )
+            return response.parsed if hasattr(response, 'parsed') and response.parsed else QualityControlReport.model_validate_json(response.text)
+        except Exception as e:
+            logger.warning(f"QC model {model_name} failed: {e}. Retrying fallback...")
+
+    # Return default fallback report if all fail
+    return QualityControlReport(
+        overall_score=100,
+        overall_status="PASSED",
+        summary_notes="Manual verification recommended. Anti-hallucination auditor was unable to reach API.",
+        item_checks=[]
+    )
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

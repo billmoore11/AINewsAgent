@@ -127,11 +127,13 @@ def review():
                         )
                     )
 
+            existing_digest = DailyDigest.model_validate_json(draft_row["content_json"])
             digest = DailyDigest(
                 title=request.form.get("title", ""),
                 intro=request.form.get("intro", ""),
                 items=items,
                 closing=request.form.get("closing", ""),
+                qc_report=existing_digest.qc_report
             )
         except Exception as e:
             flash(f"Error parsing form data: {e}", "error")
