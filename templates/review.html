@@ -85,7 +85,7 @@
                         {% endif %}
                     </div>
                     {% if check.suggested_correction %}
-                    <button type="button" class="btn btn-outline btn-sm" style="white-space: nowrap; font-size: 0.8rem;" onclick="applyCorrection('{{ item_idx }}', '{{ check.suggested_correction|escapejs }}')">
+                    <button type="button" class="btn btn-outline btn-sm btn-apply-correction" style="white-space: nowrap; font-size: 0.8rem;" data-item-idx="{{ item_idx }}" data-correction="{{ check.suggested_correction }}">
                         ✨ Apply Correction
                     </button>
                     {% endif %}
@@ -129,6 +129,14 @@ document.querySelectorAll('.btn-remove').forEach(btn => {
             card.querySelectorAll('input, textarea').forEach(el => el.value = '');
             card.style.display = 'none';
         }, 300);
+    });
+});
+
+document.querySelectorAll('.btn-apply-correction').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const idx = btn.getAttribute('data-item-idx');
+        const text = btn.getAttribute('data-correction');
+        applyCorrection(idx, text);
     });
 });
 
