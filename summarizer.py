@@ -77,10 +77,11 @@ def summarize_newsletters(emails: list[EmailContent]) -> DailyDigest:
         combined_context.append(f"Source: {email.sender}\nSubject: {email.subject}\nContent:\n{email.body_text}\n---")
     
     full_text = "\n".join(combined_context)
+    if len(full_text) > 40000:
+        logger.info(f"Context size ({len(full_text)} chars) is large. Truncating to top 40,000 chars for optimal performance...")
+        full_text = full_text[:40000]
+        
     logger.info(f"Total context length for summarization: {len(full_text)} characters")
-    
-    # In a fully robust production system, we'd chunk this if len(full_text) > 100k
-    # For now, we will pass it directly assuming context window (1M tokens) is sufficient.
     
     candidate_models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
     last_error = None
